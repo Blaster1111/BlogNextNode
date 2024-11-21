@@ -17,7 +17,6 @@ const createPost = asyncHandler(async (req, res) => {
   res.status(201).json(new apiResponse(201, post, "Post created successfully"));
 });
 
-// Get posts (filtered by author if provided)
 const getPosts = asyncHandler(async (req, res) => {
   const { author } = req.query;  // Get 'author' from query params
 
