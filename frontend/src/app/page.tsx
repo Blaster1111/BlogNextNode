@@ -1,11 +1,24 @@
+import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
 import { serverApi } from '@/lib/server-api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 
 export default async function HomePage() {
+  const cookieStore = cookies();
+  const authToken = cookieStore.get('token');
+
+  if (!authToken) {
+    redirect('/login');
+  }
+
   try {
-    const response = await serverApi.get('/posts');
+    const response = await serverApi.get('/posts', {
+      headers: {
+        'Authorization': `Bearer ${authToken.value}`
+      }
+    });
     const posts = response.data.data;
 
     return (
@@ -36,8 +49,8 @@ export default async function HomePage() {
                         >
                           {post.title}
                         </Link>
-                        <Badge 
-                          variant="secondary" 
+                        <Badge
+                          variant="secondary"
                           className="text-xs sm:text-sm"
                         >
                           {new Date(post.createdAt).toLocaleDateString()}
