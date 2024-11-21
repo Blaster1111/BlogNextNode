@@ -6,6 +6,44 @@ This is a blog platform with a frontend and backend. The backend has been deploy
 Backend URL (deployed): https://blognextnode.onrender.com
 Frontend: Currently in development, not deployed.
 
+## Frontend Description
+Responsive UI with the following routes and features for each route.
+
+1. Signup
+Allows Users to create new accounts.
+```bash
+  /signup
+```
+
+2. Login
+Allows Users to login their accounts.
+```bash
+  /login
+```
+3. Home Page (Protected Route)
+Allows users to view all the blogs. (Follows SSR)
+```bash
+  /
+```
+
+4. Dashboard Page (Protected Route)
+Allows users to view their own blogs.
+
+Allows users to navigate to home page.
+
+Allows users to logout and create their own blogs.
+```bash
+  /dashboard
+```
+
+5. Post Page (Protected Route)
+When a blog is clicked complete blog information is visible to the user using SSR and static generation on this page.
+```bash
+  /post/:id
+```
+
+
+
 
 
 ## How to run
