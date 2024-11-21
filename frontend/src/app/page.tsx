@@ -1,133 +1,78 @@
-"use client";
+import { serverApi } from '@/lib/server-api';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import Link from 'next/link';
+import { Badge } from '@/components/ui/badge';
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { useAuth } from "@/hooks/useAuth";
-import { api } from "@/lib/api";
-import { Post, ApiResponse } from "@/types";
-import axios from "axios";
+export default async function HomePage() {
+  try {
+    const response = await serverApi.get('/posts');
+    const posts = response.data.data;
 
-export default function HomePage() {
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [isMyPosts, setIsMyPosts] = useState(false);  // State to track if viewing my posts
-  const router = useRouter();
-  const { authenticated } = useAuth();
-
-  useEffect(() => {
-    const fetchPosts = async () => {
-      const token = localStorage.getItem("token");
-
-      if (!token) {
-        router.push("/login");
-        return;
-      }
-
-      try {
-        const response = await api.get<ApiResponse<Post[]>>("/posts", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          params: isMyPosts ? { author: "me" } : {},  // Modify to only get user's posts
-        });
-
-        // Assuming the API response follows the ApiResponse interface
-        if (response.data.success) {
-          setPosts(response.data.data);
-          setError(null);
-        } else {
-          setError(response.data.message || "Failed to fetch posts");
-        }
-      } catch (err) {
-        console.error("Error fetching posts:", err);
-
-        if (axios.isAxiosError(err)) {
-          setError(
-            err.response?.data?.message ||
-            "Failed to fetch posts. Please try again."
-          );
-        } else {
-          setError("An unexpected error occurred");
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchPosts();
-  }, [router, isMyPosts]);  // Re-run on changing view mode
-
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    router.push("/login");
-  };
-
-  if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <p className="text-gray-500 text-xl">Loading posts...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-red-500 text-xl mb-4">{error}</p>
-          <Button onClick={() => window.location.reload()}>Try Again</Button>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-4 sm:p-6 md:p-8">
+        <div className="max-w-4xl mx-auto">
+          <Card className="shadow-lg">
+            <CardHeader>
+              <CardTitle className="text-2xl sm:text-3xl font-bold text-center">
+                Discover Latest Blog Posts
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {posts.length === 0 ? (
+                <p className="text-center text-muted-foreground text-sm sm:text-base">
+                  No posts available
+                </p>
+              ) : (
+                <div className="space-y-3 sm:space-y-4">
+                  {posts.map((post: any) => (
+                    <div
+                      key={post._id}
+                      className="border rounded-lg p-3 sm:p-4 hover:bg-gray-50 transition-colors"
+                    >
+                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-2 space-y-2 sm:space-y-0">
+                        <Link
+                          href={`/posts/${post._id}`}
+                          className="text-lg sm:text-xl font-semibold hover:text-blue-600 w-full truncate"
+                        >
+                          {post.title}
+                        </Link>
+                        <Badge 
+                          variant="secondary" 
+                          className="text-xs sm:text-sm"
+                        >
+                          {new Date(post.createdAt).toLocaleDateString()}
+                        </Badge>
+                      </div>
+                      <p className="text-muted-foreground text-sm sm:text-base line-clamp-2">
+                        {post.content}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
     );
-  }
+  } catch (error) {
+    console.error('Error fetching posts:', error);
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-4xl mx-auto p-6">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900">Blog Posts</h1>
-          {authenticated && (
-            <>
-              <Button onClick={() => router.push('/dashboard')}>Write New Post</Button>
-              <Button onClick={() => setIsMyPosts(!isMyPosts)}>
-                {isMyPosts ? "All Posts" : "My Posts"}
-              </Button>
-              <Button onClick={handleLogout}>Logout</Button>
-            </>
-          )}
-        </div>
-        <div className="grid gap-6">
-          {posts.length ? (
-            posts.map((post) => (
-              <Card key={post._id} className="hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <CardTitle className="text-2xl font-semibold">{post.title}</CardTitle>
-                  <p className="text-sm text-gray-500">
-                    By {post.authorId.email} • {new Date(post.createdAt).toLocaleDateString()}
-                  </p>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-gray-700 line-clamp-3">{post.content}</p>
-                  <Button
-                    variant="link"
-                    className="mt-4 p-0"
-                    onClick={() => router.push(`/post/${post._id}`)}
-                  >
-                    Read more →
-                  </Button>
-                </CardContent>
-              </Card>
-            ))
-          ) : (
-            <div className="text-center py-12">
-              <p className="text-gray-500">No posts found</p>
-            </div>
-          )}
-        </div>
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 to-pink-50 p-4">
+        <Card className="w-full max-w-md sm:max-w-sm shadow-2xl">
+          <CardHeader>
+            <CardTitle className="text-center text-xl sm:text-2xl font-bold text-red-600">
+              Error Loading Posts
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-center text-muted-foreground text-sm sm:text-base">
+              Unable to fetch posts. Please try again later.
+            </p>
+          </CardContent>
+        </Card>
       </div>
-    </div>
-  );
+    );
+  }
 }

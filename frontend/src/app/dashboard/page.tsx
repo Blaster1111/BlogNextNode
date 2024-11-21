@@ -1,89 +1,233 @@
-"use client";
+'use client';
+import { useToast } from '@/hooks/use-toast'
+import { useAuth } from '@/hooks/useAuth';
+import Link from 'next/link';
+import { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { clientApi } from '@/lib/client-api';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import Cookies from 'js-cookie';
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { useAuth } from "@/hooks/useAuth";
-import { useState } from "react";
-import { api } from "@/lib/api";
-import { useRouter } from "next/navigation";
+interface Post {
+  _id: string;
+  title: string;
+  content: string;
+  createdAt: string;
+}
 
 export default function DashboardPage() {
-  const { authenticated } = useAuth();
-  const [title, setTitle] = useState("");
-  const [content, setContent] = useState("");
-  const router = useRouter();
+  const { toast } = useToast();
+  const { authenticated, user, logout } = useAuth();
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [postTitle, setPostTitle] = useState('');
+  const [postContent, setPostContent] = useState('');
+  const [isCreatePostDialogOpen, setIsCreatePostDialogOpen] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  useEffect(() => {
+    const fetchUserPosts = async () => {
+      if (!authenticated) return;
+  
+      try {
+        const token = Cookies.get('token');
+        const response = await clientApi.get('/posts', {
+          params: { author: 'me' },
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        setPosts(response.data.data);
+        setIsLoading(false);
+      } catch (error) {
+        toast({
+          title: 'Error',
+          description: 'Failed to fetch your posts',
+          variant: 'destructive'
+        });
+        setIsLoading(false);
+      }
+    };
+  
+    fetchUserPosts();
+  }, [authenticated]);
 
-    const token = localStorage.getItem("token");
-    if (!token) {
-      alert("You need to be logged in to post.");
+  const handleCreatePost = async () => {
+    if (!postTitle.trim() || !postContent.trim()) {
+      toast({
+        title: 'Error',
+        description: 'Please provide both title and content',
+        variant: 'destructive'
+      });
       return;
     }
 
     try {
-      await api.post(
-        "/post",
-        { title, content },
-        {
+      const token = Cookies.get('token');
+      const response = await clientApi.post('/post', 
+        { title: postTitle, content: postContent },
+        { 
           headers: {
-            Authorization: `Bearer ${token}`,
-          },
+            'Authorization': `Bearer ${token}`
+          }
         }
       );
-      // After successful post, clear the fields and redirect to the home page
-      setTitle("");
-      setContent("");
-      router.push("/"); // Redirect to the home page
-      alert("Post published successfully!");
+      const newPost = response.data.data;
+      setPosts([newPost, ...posts]);
+      setPostTitle('');
+      setPostContent('');
+      setIsCreatePostDialogOpen(false);
+      toast({
+        title: 'Success',
+        description: 'Post created successfully',
+        variant: 'default'
+      });
     } catch (error) {
-      console.error("Error posting:", error);
-      alert("Failed to publish the post");
+      toast({
+        title: 'Error',
+        description: 'Failed to create post',
+        variant: 'destructive'
+      });
     }
   };
 
   if (!authenticated) {
-    return <p>Redirecting to login...</p>;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-100 to-purple-100 p-4">
+        <Card className="w-full max-w-md shadow-2xl">
+          <CardHeader className="text-center">
+            <CardTitle className="text-xl sm:text-2xl font-bold text-gray-800">
+              Access Denied
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-center text-sm sm:text-base text-gray-600">
+              Please log in to access your dashboard.
+            </p>
+            <Link href="/login" className="block">
+              <Button className="w-full" variant="outline">
+                Go to Login
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-4xl mx-auto p-6">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold">Dashboard</h1>
-          <Button variant="outline" onClick={() => router.back()}>
-            Back
-          </Button>
-        </div>
-        
-        <Card className="mb-8">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-4 sm:p-6 md:p-8">
+      <div className="max-w-4xl mx-auto space-y-6 sm:space-y-8">
+        {/* User Profile Card */}
+        <Card className="shadow-lg">
+          <CardHeader className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-4">
+            <Avatar className="w-12 h-12 sm:w-16 sm:h-16">
+              <AvatarImage src="/placeholder-avatar.png" alt="User Avatar" />
+              <AvatarFallback>{user?.email?.[0].toUpperCase()}</AvatarFallback>
+            </Avatar>
+            <div className="text-center sm:text-left w-full">
+              <CardTitle className="text-xl sm:text-2xl">
+                Welcome, {user?.email || 'User'}
+              </CardTitle>
+              <p className="text-xs sm:text-sm text-muted-foreground">
+                Manage your account
+              </p>
+            </div>
+            <div className="mt-4 sm:mt-0 sm:ml-auto flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+              <Dialog 
+                open={isCreatePostDialogOpen} 
+                onOpenChange={setIsCreatePostDialogOpen}
+              >
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm" className="w-full sm:w-auto">
+                    Create Post
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Create a New Post</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <Input 
+                      placeholder="Post Title" 
+                      value={postTitle}
+                      onChange={(e) => setPostTitle(e.target.value)}
+                    />
+                    <Textarea 
+                      placeholder="Post Content" 
+                      value={postContent}
+                      onChange={(e) => setPostContent(e.target.value)}
+                      className="min-h-[150px]"
+                    />
+                    <Button onClick={handleCreatePost} className="w-full">
+                      Publish Post
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+              <Link href="/" className="w-full sm:w-auto">
+                <Button variant="secondary" size="sm" className="w-full sm:w-auto">
+                  Home Page
+                </Button>
+              </Link>
+              <Button 
+                onClick={logout} 
+                variant="destructive" 
+                size="sm" 
+                className="w-full sm:w-auto"
+              >
+                Logout
+              </Button>
+            </div>
+          </CardHeader>
+        </Card>
+
+        {/* Posts Card */}
+        <Card className="shadow-lg">
           <CardHeader>
-            <CardTitle>Create New Post</CardTitle>
+            <CardTitle className="text-lg sm:text-xl">Your Posts</CardTitle>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Input
-                  placeholder="Post title"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                />
+            {isLoading ? (
+              <p className="text-center text-xs sm:text-sm text-muted-foreground">
+                Loading posts...
+              </p>
+            ) : posts.length === 0 ? (
+              <p className="text-center text-xs sm:text-sm text-muted-foreground">
+                No posts found
+              </p>
+            ) : (
+              <div className="space-y-3 sm:space-y-4">
+                {posts.map((post) => (
+                  <div 
+                    key={post._id} 
+                    className="border rounded-lg p-3 sm:p-4 hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-2 gap-2">
+                      <Link 
+                        href={`/posts/${post._id}`} 
+                        className="text-base sm:text-lg font-semibold hover:text-blue-600 w-full truncate"
+                      >
+                        {post.title}
+                      </Link>
+                      <Badge 
+                        variant="secondary" 
+                        className="text-xs sm:text-sm w-auto self-start sm:self-auto"
+                      >
+                        {new Date(post.createdAt).toLocaleDateString()}
+                      </Badge>
+                    </div>
+                    <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2">
+                      {post.content}
+                    </p>
+                  </div>
+                ))}
               </div>
-              <div className="space-y-2">
-                <Textarea
-                  placeholder="Write your post content here..."
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
-                  className="min-h-[200px]"
-                />
-              </div>
-              <Button type="submit">
-                Publish Post
-              </Button>
-            </form>
+            )}
           </CardContent>
         </Card>
       </div>

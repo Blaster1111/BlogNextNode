@@ -1,44 +1,51 @@
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import axios from "axios";
+// hooks/useAuth.ts
+'use client'
+
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import Cookies from 'js-cookie'
 
 export const useAuth = () => {
-  const [authenticated, setAuthenticated] = useState(false);
-  const router = useRouter();
+  const [authenticated, setAuthenticated] = useState(false)
+  const [user, setUser] = useState<{ email?: string } | null>(null)
+  const router = useRouter()
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
+    const token = Cookies.get('token')
+    const storedUser = localStorage.getItem('user')
+    
     if (token) {
-      // Set the Authorization header for all axios requests
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      setAuthenticated(true);
-    } else {
-      setAuthenticated(false);
-      router.push("/login");
+      setAuthenticated(true)
+      if (storedUser) {
+        setUser(JSON.parse(storedUser))
+      }
     }
-  }, [router]);
+  }, [])
 
-  const login = (token: string) => {
-    // Store the token in localStorage
-    localStorage.setItem("token", token);
+  const login = (token: string, userData?: any) => {
+    Cookies.set('token', token, { expires: 1, path: '/' })
+    setAuthenticated(true)
     
-    // Set the Authorization header for all axios requests
-    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    if (userData) {
+      localStorage.setItem('user', JSON.stringify(userData))
+      setUser(userData)
+    }
     
-    setAuthenticated(true);
-    router.push("/dashboard");
-  };
+    router.push('/dashboard')
+  }
 
   const logout = () => {
-    // Remove the token from localStorage
-    localStorage.removeItem("token");
-    
-    // Remove the Authorization header
-    delete axios.defaults.headers.common['Authorization'];
-    
-    setAuthenticated(false);
-    router.push("/login");
-  };
+    Cookies.remove('token', { path: '/' })
+    localStorage.removeItem('user')
+    setAuthenticated(false)
+    setUser(null)
+    router.push('/login')
+  }
 
-  return { authenticated, login, logout };
-};
+  return { 
+    authenticated, 
+    user,
+    login, 
+    logout 
+  }
+}

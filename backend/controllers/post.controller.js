@@ -31,4 +31,15 @@ const getPosts = asyncHandler(async (req, res) => {
   res.status(200).json(new apiResponse(200, posts, "Posts retrieved successfully"));
 });
 
-export { createPost, getPosts };
+const getPostById = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  const post = await Post.findById(id).populate("authorId", "email");
+  if (!post) {
+    throw new ApiError(404, "Post not found");
+  }
+
+  res.status(200).json(new apiResponse(200, post, "Post retrieved successfully"));
+});
+
+export { createPost, getPosts, getPostById };
