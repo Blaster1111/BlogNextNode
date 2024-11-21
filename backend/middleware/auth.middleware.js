@@ -4,7 +4,6 @@ import { apiResponse } from "../utils/apiResponse.js";
 
 const authMiddleware = (req, res, next) => {
   const token = req.headers.authorization?.split(" ")[1];  
-  console.log(req.headers['authorization']);
   if (!token) {
     return res.status(401).json(new apiResponse(401, null, "Unauthorized"));
   }
