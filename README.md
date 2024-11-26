@@ -4,6 +4,8 @@
 This is a blog platform with a frontend and backend. The backend has been deployed to Render, and the frontend is in development. The frontend communicates with the backend via API endpoints for handling blog posts.
 
 Backend URL (deployed): https://blognextnode.onrender.com (Might take a few seconds to send the first request at it restarts the server on render free version.)
+
+
 Frontend: Currently in development, not deployed. (vercel deployed link static generation has some kind of bug from their end but it works perfectly on local host.)
 
 ## Frontend Description
